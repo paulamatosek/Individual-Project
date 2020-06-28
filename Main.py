@@ -1,9 +1,9 @@
 from bs4 import BeautifulSoup
 import requests
 from Model import Jewellery
+import xlsxwriter
 
-
-class PandoraScrapper:
+class PandoraScrapping:
     pandoraMainUrl = 'https://uk.pandora.net/en/'
 
     def __init__(self):
@@ -43,8 +43,32 @@ class PandoraScrapper:
             JewelleryList.append(DataJewellery)  # add to the list data
 
         return JewelleryList
-    print(JewelleryList)
+
+class ExportController(PandoraScrapping):
+    def exportToDatabase(self):
+        pass
+    def exportToXLSX(self):
+        tableTitle = [
+            "Type",
+            "Title",
+            "Price"]
+        workbook = xlsxwriter.Workbook("ProductAnalysis.xlsx")
+        worksheet = workbook.add_worksheet()
+        row = 0
+        column = 0
+        while (column<len(tableTitle)):
+            worksheet.write(row, column, tableTitle[column])
+            column += 1
+
+        for
 
 
-pandora = PandoraScrapper()  # creating the object
+        workbook.close()
+
+
+# pandora = PandoraScrapping()  # creating the object
+pandora = ExportController()
 pandora.getJewellery()
+
+pandora.exportToXLSX()
+
