@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import lxml
 import html5lib
 
+import pandas as pd
+
 
 class Jewellery:
     def __init__(self, title, price,type):
@@ -21,6 +23,7 @@ class Jewellery:
 
 class PandoraScrapping:
     pandoraMainUrl = 'https://uk.pandora.net/'
+
     def __init__(self):
         self.jewellery = []
 
@@ -62,9 +65,6 @@ class PandoraScrapping:
             # print(str(DataJewellery))
         return JewelleryList
 
-pandora = PandoraScrapping()  # creating the object
-pandora.getJewellery()
-
 
 class ExportController(PandoraScrapping):
     def exportToXlsx(self):
@@ -97,75 +97,74 @@ class ExportController(PandoraScrapping):
 
     def exportToDatabase(self):
         conn = pymysql.connect("localhost", "pm_user", "pandora", "pandora_db")
-        self.c = conn.cursor()
+        self.connection  = conn.cursor()
         conn.autocommit(True)
-        self.c.execute("CREATE TABLE product_list ("
+        self.connection.execute("DROP TABLE product_list")
+        self.connection.execute("CREATE TABLE product_list ("
                    "product_id int primary key auto_increment, "
                    "title varchar(255), "
                    "price varchar(512), "
-                   "type varchar(255), "
+                   "type varchar(255) "
                    ")")
 
         for row in self.jewellery:
-            self.c.execute("INSERT INTO product_list VALUES (default, %s,%s,%s)",
+            self.connection.execute("INSERT INTO product_list VALUES (default, %s,%s,%s)",
                        (row.title, row.price, row.type))
 
 
-  # def generatePlots(self):
-  #       self.c.execute("SELECT title, price, type FROM product_list")
-  #       product_list = self.c.fetchall()
-  #       product_df = pd.DataFrame(product, columns=['title','price','type'])
-  #       counties = risk_df['country'].tolist()[:5]
-  #       areas = risk_df['area'].tolist()[:5]
-  #       risks = risk_df['risk'].tolist()[:5]
-  #       climates = risk_df['climate'].tolist()[:5]
-  #
-  #       x = pd.np.arange(len(counties))  # the label locations
-  #       width = 0.35  # the width of the bars
-  #       risks_cat = []
-  #       climates_cat = []
-  #       for v in risks:
-  #           risks_cat.append(categories[v])
-  #       for v in climates:
-  #           climates_cat.append(categories[v])
-  #       fig, ax = plt.subplots()
-  #       rects1 = ax.bar(x - width / 2, risks_cat, width, label='Business Risk Asesm.')
-  #       rects2 = ax.bar(x + width / 2, climates_cat, width, label='Business Climate Asesm.')
-  #       ax.set_ylabel('Categories')
-  #       ax.set_title('Business risk & climate assesments')
-  #       ax.set_xticks(x)
-  #       ax.set_xticklabels(counties)
-  #       ax.legend()
-  #       fig.tight_layout()
-  #       plt.show()
+
+    def generatePieChart(self):
+        self.c.execute("SELECT price, (count(*)/(SELECT count(*) FROM product_list))*100 AS count "
+                       "FROM product_list GROUP BY price order by count desc limit 10")
+        result = self.c.fetchall()
+        agg_df = pd.DataFrame(result, columns=['price','count'])
+        prices = agg_df['price'].tolist()
+        contribution = agg_df['count'].tolist()
+        explode = (0.3, 0.2, 0.1, 0, 0, 0, 0, 0,0,0)
+        fig1, ax1 = plt.subplots()
+        ax1.set_title('Business prices analysis')
+        ax1.pie(contribution, explode = explode,  labels=prices, autopct='%1.1f%%', shadow=True, startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        plt.show()
+
+
+class CLI:
+    def __init__(self):
+        self.controller = ExportController()
+        self.controller.getJewellery()
+        self.controller.exportToDatabase()
+        # self.pandora = PandoraScrapping()
+        while(True):
+            print("Welcome to application where you can find title of product: ")
+            decision = input("Search for the title of product: \n(Q) - quit").upper()
+            if(decision == "Q"):
+               break
+
+            else:
+               print("Searching for name...")
+               self.controller.connection.execute('select * from product_list where title LIKE \'%' +  decision + '%\'')
+               rows = (self.controller.connection.fetchall())
+               for row in rows:
+                   print(row[1])
 
 
 
-  #
-  #   def generatePieChart(self):
-  #       self.c.execute("SELECT climate, (count(*)/(SELECT count(*) FROM business_risk))*100 "
-  #                      "FROM business_risk GROUP BY climate ORDER BY climate")
-  #       result = self.c.fetchall()
-  #       agg_df = pd.DataFrame(result, columns=['climate', 'count'])
-  #       climates = agg_df['climate'].tolist()
-  #       contribution = agg_df['count'].tolist()
-  #       explode = (0.1, 0, 0, 0, 0, 0, 0, 0)
-  #       fig1, ax1 = plt.subplots()
-  #       ax1.set_title('Business climate assesments')
-  #       ax1.pie(contribution, explode = explode, labels=climates, autopct='%1.1f%%', shadow=True, startangle=90)
-  #       ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-  #       plt.show()
+pandora = PandoraScrapping()
+pandora.getJewellery()
+CLI()
 
 
-cs = ExportController()      # utworzenie obiektu i wywolanie konstruktora domyslnego
-# cs.getTablesByPandas()      # wywolanie metody
+
+
+
+cs = ExportController()
+cs.getTablesByPandas()
 
 cs.getJewellery()
 cs.exportToXlsx()
 
 cs.exportToDatabase()
 
-# cs.generatePlots()
-# cs.generatePieChart()
+cs.generatePieChart()
 
 
