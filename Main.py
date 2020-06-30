@@ -148,13 +148,9 @@ class CLI:
                    print(row[1])
 
 
-
 pandora = PandoraScrapping()
 pandora.getJewellery()
 CLI()
-
-
-
 
 
 cs = ExportController()
